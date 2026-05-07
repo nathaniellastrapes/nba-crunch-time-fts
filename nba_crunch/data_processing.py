@@ -1,5 +1,9 @@
 import pandas as pd
 import numpy as np
+from nba_api.stats.endpoints import playbyplayv3, leaguegamefinder
+from pathlib import Path
+import time
+from tqdm import tqdm
 
 def parse_clock(clock_str):
     """
@@ -64,5 +68,62 @@ def enrich_free_throws(pbp):
     (fts['clock_seconds'] <= 300) &
     (fts['margin'] <= 5)
     )
-
     return fts
+
+def get_season_game_ids(season):
+    """
+    Takes a season id and lists all game ids for the season
+    
+    Parameters
+    ----------
+    season : str
+        ex: '2025-26'
+    
+    Returns
+    -------
+    list
+        List of game ids
+    """
+    gamefinder = leaguegamefinder.LeagueGameFinder(
+        season_nullable=season,
+        season_type_nullable='Regular Season',
+        league_id_nullable='00'
+    )
+
+    games = gamefinder.get_data_frames()[0]
+    game_ids = games['GAME_ID'].unique().tolist()
+    return game_ids
+
+def pull_and_save_pbp(game_id, output_dir, sleep_seconds=0.6):
+    """
+    Pull play-by-play for one game and save to disk. 
+    Skips if the file already exists.
+    
+    Parameters
+    ----------
+    game_id : str
+    output_dir : Path
+        Directory to save the file in. Filename will be {game_id}.csv.
+    sleep_seconds : float
+        Seconds to sleep AFTER the API call (rate limiting). 
+        Only applies if we actually called the API.
+    
+    Returns
+    -------
+    str
+        One of: 'pulled', 'skipped', 'failed'
+    """
+    output_dir = Path(output_dir)
+    filepath = output_dir / f"{game_id}.csv"
+
+    if filepath.exists():
+        return 'skipped'
+ 
+    try:
+        pbp = playbyplayv3.PlayByPlayV3(game_id=game_id).get_data_frames()[0]
+        pbp.to_csv(filepath, index=False)
+        time.sleep(sleep_seconds)
+        return 'pulled'
+    except Exception as e:
+        print(f"Failed to pull {game_id}: {e}")
+        return 'failed'
