@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: nba-crunch
+Version: 0.1.0
+Summary: Analysis of NBA free throw shooting in crunch time
+Requires-Python: >=3.10
