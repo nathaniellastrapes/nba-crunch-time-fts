@@ -127,3 +127,9 @@ def pull_and_save_pbp(game_id, output_dir, sleep_seconds=0.6):
     except Exception as e:
         print(f"Failed to pull {game_id}: {e}")
         return 'failed'
+    
+def season_from_game_id(game_id):
+    """Extract season string like '2023-24' from a regular-season game ID."""
+    yy = game_id[3:5]
+    next_yy = str((int(yy) + 1) % 100).zfill(2)
+    return f"20{yy}-{next_yy}"
